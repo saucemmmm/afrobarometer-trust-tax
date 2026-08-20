@@ -32,10 +32,38 @@ DB_PATH <- Sys.getenv("DB_PATH", "data/afrobarometer.duckdb")
 OUT_DIR <- Sys.getenv("RESULTS_DIR", "output")
 B_BOOT  <- as.integer(Sys.getenv("B_BOOT", "999"))
 
+# Preflight. The alternative is a raw DuckDB catalog error that says a view is
+# missing but not why or what to do about it.
+REQUIRED_VIEWS <- c("v_micro", "analysis_panel", "analysis_panel_balanced")
+
+preflight <- function(con) {
+  if (!dir.exists("R") || !dir.exists("sql"))
+    stop("Run this from the REPOSITORY ROOT (the folder containing R/ and sql/), ",
+         "not from the folder the file happens to live in. Current wd: ", getwd(),
+         call. = FALSE)
+  have <- dbGetQuery(con, "
+      SELECT table_name FROM information_schema.tables WHERE table_schema = 'core'
+      UNION ALL
+      SELECT view_name AS table_name FROM duckdb_views() WHERE schema_name = 'core'")$table_name
+  missing <- setdiff(REQUIRED_VIEWS, have)
+  if (length(missing))
+    stop("The database is missing: ", paste(missing, collapse = ", "), ".\n",
+         "  These views are created by the analysis SQL, which runs as part of the build.\n",
+         "  Fix:  Rscript R/05_build_database.R --fresh\n",
+         "  (If you built the database before the analysis queries were added, this is expected.)",
+         call. = FALSE)
+  invisible(TRUE)
+}
+
 main <- function() {
+  if (!file.exists(DB_PATH))
+    stop("No database at '", DB_PATH, "'. Build it first:\n",
+         "  Rscript R/04_convert_sav.R  &&  Rscript R/05_build_database.R --fresh",
+         call. = FALSE)
   dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
   con <- dbConnect(duckdb::duckdb(), DB_PATH, read_only = TRUE)
   on.exit(dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  preflight(con)
 
   micro    <- dbGetQuery(con, "SELECT * FROM core.v_micro")
   panel    <- dbGetQuery(con, "SELECT * FROM core.analysis_panel")
