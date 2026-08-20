@@ -7,10 +7,19 @@
 -- Run     : 4th.  Rscript R/05_build_database.R  runs 01-04 in order.
 --
 -- HOW THE UNPIVOT WORKS, and why it is not a hard-coded column list.
---   Each staging row is serialised with to_json(), giving an object keyed by
---   column name; question_map.round_variable then pulls the field out by name.
---   The variable names live in DATA, not in this script. Add a concept to the
---   crosswalk, re-run, and this file does not change.
+--   Each staging table is melted with UNPIVOT over COLUMNS(*) -- every column,
+--   named by none of them -- after TRY_CAST(COLUMNS(*) AS DOUBLE) puts them on
+--   a common type. That yields (round, respondent, variable_name, value), which
+--   is then INNER JOINed to question_map. The join is the filter: only mapped
+--   variables survive. Variable names live in DATA, not in this script; add a
+--   concept to the crosswalk, re-run, and this file does not change.
+--
+--   An earlier version used to_json() + json_extract_string, which is tidier but
+--   requires DuckDB's `json` extension. That extension is bundled in some builds
+--   and autoloaded-on-demand in others, so it turned a fresh-clone rebuild into
+--   something that needed network access. UNPIVOT is core DuckDB and needs
+--   nothing. The cost is a large intermediate (~18M rows per round), so the
+--   rounds are inserted one at a time to bound peak memory.
 --
 -- THREE DATA-QUALITY FINDINGS ARE HANDLED HERE.
 --
@@ -65,27 +74,69 @@ ORDER BY round_number, respno, dup_seq;
 -- -----------------------------------------------------------------------------
 -- 2. Crosswalk-driven extraction, already carrying respondent_id.
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE TEMP TABLE extracted AS
-WITH mapped AS (
-    SELECT m.round_id, q.question_id, q.canonical_code, q.role, m.round_variable
-    FROM core.question_map m JOIN core.questions q USING (question_id)
-    WHERE m.present
-),
-raw_json AS (
-    SELECT 6 AS round_number, RESPNO AS respno, REGION_LABEL, DATEINTR, to_json(s) AS j FROM staging.r6 s
-    UNION ALL SELECT 7, RESPNO, REGION_LABEL, DATEINTR, to_json(s) FROM staging.r7 s
-    UNION ALL SELECT 8, RESPNO, REGION_LABEL, DATEINTR, to_json(s) FROM staging.r8 s
-    UNION ALL SELECT 9, RESPNO, REGION_LABEL, DATEINTR, to_json(s) FROM staging.r9 s
-)
-SELECT b.respondent_id, r.round_number, m.question_id, m.canonical_code, m.role,
-       TRY_CAST(json_extract_string(r.j, '$."' || m.round_variable || '"') AS DOUBLE) AS value_num
-FROM raw_json r
-JOIN respondent_base b
-  ON  b.round_number = r.round_number
-  AND b.respno       = r.respno
-  AND b.REGION_LABEL IS NOT DISTINCT FROM r.REGION_LABEL      -- finding (c)
-  AND b.DATEINTR     IS NOT DISTINCT FROM r.DATEINTR
-JOIN mapped m ON m.round_id = r.round_number;
+CREATE OR REPLACE TEMP TABLE mapped AS
+SELECT m.round_id, q.question_id, q.canonical_code, q.role, m.round_variable
+FROM core.question_map m JOIN core.questions q USING (question_id)
+WHERE m.present;
+
+CREATE OR REPLACE TEMP TABLE extracted (
+    respondent_id  VARCHAR,
+    round_number   INTEGER,
+    question_id    INTEGER,
+    canonical_code VARCHAR,
+    role           VARCHAR,
+    value_num      DOUBLE
+);
+
+-- One INSERT per round. The four blocks differ only in the staging table and
+-- the round number; nothing round-specific about the VARIABLES appears.
+INSERT INTO extracted
+SELECT b.respondent_id, 6, m.question_id, m.canonical_code, m.role, l.value_num
+FROM (UNPIVOT (SELECT RESPNO, DATEINTR, REGION_LABEL,
+                      TRY_CAST(COLUMNS(* EXCLUDE (RESPNO, DATEINTR, COUNTRY_LABEL, REGION_LABEL)) AS DOUBLE)
+               FROM staging.r6)
+      ON COLUMNS(* EXCLUDE (RESPNO, DATEINTR, REGION_LABEL))
+      INTO NAME round_variable VALUE value_num) l
+JOIN mapped m ON m.round_id = 6 AND m.round_variable = l.round_variable
+JOIN respondent_base b ON b.round_number = 6 AND b.respno = l.RESPNO
+     AND b.REGION_LABEL IS NOT DISTINCT FROM l.REGION_LABEL      -- finding (c)
+     AND b.DATEINTR     IS NOT DISTINCT FROM l.DATEINTR;
+
+INSERT INTO extracted
+SELECT b.respondent_id, 7, m.question_id, m.canonical_code, m.role, l.value_num
+FROM (UNPIVOT (SELECT RESPNO, DATEINTR, REGION_LABEL,
+                      TRY_CAST(COLUMNS(* EXCLUDE (RESPNO, DATEINTR, COUNTRY_LABEL, REGION_LABEL)) AS DOUBLE)
+               FROM staging.r7)
+      ON COLUMNS(* EXCLUDE (RESPNO, DATEINTR, REGION_LABEL))
+      INTO NAME round_variable VALUE value_num) l
+JOIN mapped m ON m.round_id = 7 AND m.round_variable = l.round_variable
+JOIN respondent_base b ON b.round_number = 7 AND b.respno = l.RESPNO
+     AND b.REGION_LABEL IS NOT DISTINCT FROM l.REGION_LABEL
+     AND b.DATEINTR     IS NOT DISTINCT FROM l.DATEINTR;
+
+INSERT INTO extracted
+SELECT b.respondent_id, 8, m.question_id, m.canonical_code, m.role, l.value_num
+FROM (UNPIVOT (SELECT RESPNO, DATEINTR, REGION_LABEL,
+                      TRY_CAST(COLUMNS(* EXCLUDE (RESPNO, DATEINTR, COUNTRY_LABEL, REGION_LABEL)) AS DOUBLE)
+               FROM staging.r8)
+      ON COLUMNS(* EXCLUDE (RESPNO, DATEINTR, REGION_LABEL))
+      INTO NAME round_variable VALUE value_num) l
+JOIN mapped m ON m.round_id = 8 AND m.round_variable = l.round_variable
+JOIN respondent_base b ON b.round_number = 8 AND b.respno = l.RESPNO
+     AND b.REGION_LABEL IS NOT DISTINCT FROM l.REGION_LABEL
+     AND b.DATEINTR     IS NOT DISTINCT FROM l.DATEINTR;
+
+INSERT INTO extracted
+SELECT b.respondent_id, 9, m.question_id, m.canonical_code, m.role, l.value_num
+FROM (UNPIVOT (SELECT RESPNO, DATEINTR, REGION_LABEL,
+                      TRY_CAST(COLUMNS(* EXCLUDE (RESPNO, DATEINTR, COUNTRY_LABEL, REGION_LABEL)) AS DOUBLE)
+               FROM staging.r9)
+      ON COLUMNS(* EXCLUDE (RESPNO, DATEINTR, REGION_LABEL))
+      INTO NAME round_variable VALUE value_num) l
+JOIN mapped m ON m.round_id = 9 AND m.round_variable = l.round_variable
+JOIN respondent_base b ON b.round_number = 9 AND b.respno = l.RESPNO
+     AND b.REGION_LABEL IS NOT DISTINCT FROM l.REGION_LABEL
+     AND b.DATEINTR     IS NOT DISTINCT FROM l.DATEINTR;
 
 -- response_values decides what is missing. Concepts with no response_values
 -- rows (continuous lived_poverty, within_weight) are valid when non-null.
