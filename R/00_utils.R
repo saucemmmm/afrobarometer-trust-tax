@@ -21,9 +21,50 @@ read_sav_safe <- function(path, ...) {
       message(sprintf("  %s: default encoding failed; re-reading as latin1 ",
                       basename(path)),
               "(the file declares LATIN1 and carries non-UTF-8 bytes)")
-      haven::read_sav(path, encoding = "latin1", ...)
+      repair_double_encoding(haven::read_sav(path, encoding = "latin1", ...))
     }
   )
+}
+
+# ---- repair_double_encoding -------------------------------------------------
+# Merge6.sav is MIXED-encoded: it declares LATIN1, most of its text is really
+# UTF-8, and a few verbatim fields are genuinely Latin-1. Reading the whole file
+# as latin1 (the only way it reads at all) therefore DOUBLE-ENCODES the UTF-8
+# parts: "Sao Tome and Principe" arrives as "SA£o TomA© and PrA-ncipe", which no
+# longer matches docs/countries.csv and silently drops 1,196 respondents on the
+# country join.
+#
+# The fix is exact and checkable: re-encode each string's code points back to
+# Latin-1 bytes and reinterpret them as UTF-8. Applied ONLY where the result is
+# valid UTF-8 and actually differs, so the genuinely Latin-1 verbatims are left
+# untouched. Verified on this file: country labels and French/Portuguese
+# verbatims are repaired, genuinely Latin-1 strings are preserved byte for byte.
+.bytes <- function(v) vapply(v, function(s) paste(charToRaw(s), collapse = ""), character(1))
+
+undouble <- function(x) {
+  if (!length(x) || !is.character(x)) return(x)
+  y <- suppressWarnings(iconv(x, from = "UTF-8", to = "latin1"))
+  Encoding(y) <- "UTF-8"
+  ok <- !is.na(y)
+  ok[ok] <- validUTF8(y[ok])
+  ok[ok] <- .bytes(y[ok]) != .bytes(x[ok])
+  out <- x; out[ok] <- y[ok]; out
+}
+
+# Repair a whole data frame: character values, value-label names, variable labels.
+repair_double_encoding <- function(df) {
+  for (nm in names(df)) {
+    col <- df[[nm]]
+    if (is.character(col)) col[] <- undouble(as.character(col))
+    labs <- attr(col, "labels", exact = TRUE)
+    if (!is.null(labs) && !is.null(names(labs))) {
+      names(labs) <- undouble(names(labs)); attr(col, "labels") <- labs
+    }
+    lb <- attr(col, "label", exact = TRUE)
+    if (!is.null(lb)) attr(col, "label") <- undouble(as.character(lb))
+    df[[nm]] <- col
+  }
+  df
 }
 
 # Which encoding actually worked -- recorded in the staging manifest so the

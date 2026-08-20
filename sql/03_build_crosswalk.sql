@@ -14,10 +14,25 @@
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 1. Countries and their aliases
+-- 0. Clear in REVERSE dependency order.
+--    Foreign keys mean core.countries cannot be emptied while core.respondents
+--    still references it, so re-running this script after 04_normalize.sql has
+--    populated the downstream tables fails unless they are cleared first. This
+--    block makes 03 re-runnable at any point in the build.
 -- -----------------------------------------------------------------------------
+DELETE FROM core.responses;
+DELETE FROM core.respondents;
+DELETE FROM core.country_rounds;
+DELETE FROM core.response_values;
+DELETE FROM core.question_map;
+DELETE FROM core.questions;
 DELETE FROM core.country_aliases;
 DELETE FROM core.countries;
+DELETE FROM core.rounds;
+
+-- -----------------------------------------------------------------------------
+-- 1. Countries and their aliases
+-- -----------------------------------------------------------------------------
 
 INSERT INTO core.countries (country_id, country_name, iso3, region)
 SELECT country_id, country_name, NULLIF(iso3, ''), NULLIF(region, '')
@@ -40,8 +55,6 @@ FROM read_csv('docs/country_aliases.csv', header = true);
 -- make weighted means non-comparable across the R7/R8 boundary.
 -- combined_weight_variable is recorded for completeness; no analysis uses it.
 -- -----------------------------------------------------------------------------
-DELETE FROM core.rounds;
-
 INSERT INTO core.rounds
 WITH observed AS (
     SELECT 6 AS round_number, COUNT(*) AS n, COUNT(DISTINCT COUNTRY_LABEL) AS nc,
@@ -77,10 +90,6 @@ ORDER BY o.round_number;
 -- question_id is assigned alphabetically by canonical_code: the value is
 -- arbitrary, so a deterministic rule beats file order, which is not guaranteed.
 -- -----------------------------------------------------------------------------
-DELETE FROM core.response_values;
-DELETE FROM core.question_map;
-DELETE FROM core.questions;
-
 CREATE OR REPLACE TEMP TABLE cw_vars AS
 SELECT canonical_code, concept, role,
        CAST(round_number AS INTEGER)             AS round_number,

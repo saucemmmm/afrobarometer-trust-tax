@@ -1,7 +1,6 @@
 # R/05_build_database.R  --  build the DuckDB database from the SQL files
 #
-# Purpose: execute sql/01_schema.sql, sql/02_load_staging.sql and
-#          sql/03_build_crosswalk.sql in order against data/afrobarometer.duckdb,
+# Purpose: execute sql/01-04 in order against data/afrobarometer.duckdb,
 #          and print each script's verification output. One command rebuilds the
 #          whole database from a fresh clone.
 #
@@ -19,7 +18,8 @@
 suppressPackageStartupMessages({ library(DBI); library(duckdb) })
 
 DB_PATH <- Sys.getenv("DB_PATH", "data/afrobarometer.duckdb")
-SCRIPTS <- c("sql/01_schema.sql", "sql/02_load_staging.sql", "sql/03_build_crosswalk.sql")
+SCRIPTS <- c("sql/01_schema.sql", "sql/02_load_staging.sql",
+             "sql/03_build_crosswalk.sql", "sql/04_normalize.sql")
 
 # -----------------------------------------------------------------------------
 # split_sql(): break a script into individual statements.
