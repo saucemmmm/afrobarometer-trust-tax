@@ -238,6 +238,26 @@ scale (0 Never · 1 Just once or twice · 2 Several times · 3 Many times ·
 which makes the construction auditable and lets R7–R9 serve as a regression
 test: recomputing the index there must reproduce the shipped variable exactly.
 
+### 6.4 Question wording drifts across rounds — recorded, not smoothed
+
+Wording was parsed directly from the codebook PDFs and stored **per round**.
+Four items are not worded identically in every round. None is fatal; all are
+documented because a reviewer who checks will find them.
+
+| Concept | Drift |
+|---|---|
+| `corruption_govt_officials` | R6/R7 ask about **"government officials"**; R8/R9 ask about **"civil servants"**. Same battery position, same 0–3 scale, but this is the **primary covariate** and the referent narrows. Treated as one concept; stated in the memo as a measurement caveat. |
+| `govt_perf_economy` | R7–R9 add *"the performance of"* to the stem. Cosmetic. |
+| `trust_tax_authority` | R6 uses a country-substituted fill, **"The [Tax Department]"**; R8 asks **"The tax/revenue office"**. |
+| `corruption_tax_officials` | R6 gives examples inline; R8 is bare **"Tax officials"**; R9 substitutes a country-specific authority. Extension item only. |
+
+The `corruption_govt_officials` drift is the one worth arguing about. "Government
+officials" and "civil servants" are close but not identical referents, and a
+respondent may read the second as narrower. The alternative — restricting to
+R6/R7 — costs half the panel to remove a wording difference the survey's own
+designers treated as continuous. Harmonizing is the right call; concealing it
+would not be.
+
 > ⚠️ **This list is FROZEN.** Adding a variable is traded directly against
 > finishing. If a new variable is proposed, answer first which one it replaces.
 
@@ -287,10 +307,27 @@ that determines whether any cross-round comparison is balanced.
   `Q8x` battery. Those 10 rows are marked `verified = FALSE` pending a
   spot-check. The codes, scale and formula **are** confirmed — only the
   wording is carried.
-- **`codebook_page` is empty throughout.** Fill as you go; it is the audit trail
-  that makes every harmonization decision traceable, and Phase 11 checks for it.
-- **`asked_all_countries`** is unset. Populate from each codebook's Note field,
-  or derive it from the data during Phase 7 validation.
+✅ **`codebook_page`, `codebook_source` and `codebook_note` are now populated**
+for all 61 rows that have a codebook entry, parsed from the PDFs rather than
+transcribed. Page numbers are **PDF page numbers** (what a viewer's page box
+shows), not printed page numbers. The three blanks are `lived_poverty` in
+R7–R9, which is a derived variable with no codebook entry.
+
+✅ **`asked_all_countries` is derived from the data**, not transcribed — see
+§6.2 and `docs/coverage_by_item.csv`.
+
+**Triple confirmation of the one coverage gap.** R6 `govt_perf_economy` is
+missing in Sudan, and three independent sources agree: the data shows zero
+valid responses there; the `.sav` carries `99 = Not asked in this country` for
+exactly 1,200 Sudanese respondents; and the R6 codebook Note reads
+*"\*Not asked in SUD"*.
+
+**Codebook vs `.sav` cross-check.** Value codes were compared between the two
+sources for all 57 substantive item-rounds. They agree except where the
+codebook omits `-1 = Missing` from its Values list (present in the `.sav`), and
+two cases where the `.sav` carries codes the R6 codebook does not document:
+`URBRUR` codes `3` and `460`, and `Q66A` code `99`. Undocumented-but-present
+codes are a data-quality finding for the README.
 
 ## 9. Inference notes fixed in advance
 
