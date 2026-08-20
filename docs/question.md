@@ -278,12 +278,15 @@ that determines whether any cross-round comparison is balanced.
 | 3 | `LivedPoverty` formula | ✅ Not in any codebook; **verified empirically** — see §6.3. |
 | 4 | `URBRUR = 460` | ✅ **Peri-Urban**, documented in R7, undocumented in R6 — see §6.2b. |
 
+| 5 | Wording for the five `lp_*` components | ✅ Confirmed and loaded. Common stem: *"Over the past year, how often, if ever, have you or anyone in your family: …"* |
+
 **Still outstanding (non-blocking):**
 
-- **Wording for the five `lp_*` components.** Marked
-  `verified = FALSE` in the crosswalk. Not blocking — the codes, scale and
-  formula are confirmed — but the `question_text` cells should be filled before
-  the crosswalk is called complete.
+- **R8/R9 `lp_*` wording is carried, not confirmed.** The battery is renumbered
+  (`Q8x` → `Q7x` in R8, `Q6x` in R9) and the confirmed wording comes from the
+  `Q8x` battery. Those 10 rows are marked `verified = FALSE` pending a
+  spot-check. The codes, scale and formula **are** confirmed — only the
+  wording is carried.
 - **`codebook_page` is empty throughout.** Fill as you go; it is the audit trail
   that makes every harmonization decision traceable, and Phase 11 checks for it.
 - **`asked_all_countries`** is unset. Populate from each codebook's Note field,

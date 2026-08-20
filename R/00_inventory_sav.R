@@ -16,6 +16,9 @@
 #         then: search inventory_variables.csv for wording keywords, and confirm
 #         each hit against the round's codebook page before it enters the crosswalk.
 
+setwd("C:/Users/maxjd/dev/afrobarometer-trust-tax")
+
+
 library(haven)
 library(dplyr)
 library(purrr)
@@ -84,7 +87,7 @@ find_var <- function(pattern) {
 }
 
 # Suggested starting searches for the Phase 0 frozen list:
-#   find_var("tax")
+  find_var("tax")
 #   find_var("corrupt")
 #   find_var("handling|performance")
 #   find_var("econom")
