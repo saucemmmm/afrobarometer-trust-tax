@@ -5,8 +5,8 @@
 --           `staging` schema. ALL columns are kept; column selection happens in
 --           04_normalize.sql via the crosswalk, so no round-specific variable
 --           name is ever hard-coded in a load step.
--- Run     : 2nd, FROM THE REPOSITORY ROOT (paths below are relative):
---             duckdb data/afrobarometer.duckdb < sql/02_load_staging.sql
+-- Run     : 2nd, FROM THE REPOSITORY ROOT (the read_parquet paths are relative).
+--           Rscript R/05_build_database.R  runs 01-03 in order.
 --
 -- Tables not views: the staging data is joined repeatedly by 04_normalize.sql,
 -- and the .duckdb file is gitignored and rebuilt from raw, so the duplication

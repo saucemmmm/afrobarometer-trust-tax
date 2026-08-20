@@ -7,7 +7,7 @@
 --           script runs, every decision about what a code MEANS lives in the
 --           database as data, and 04_normalize.sql needs no variable names.
 -- Run     : 3rd, from the repository root, after 01 and 02.
---             duckdb data/afrobarometer.duckdb < sql/03_build_crosswalk.sql
+--           Rscript R/05_build_database.R  runs all three in order.
 --
 -- The CSVs are inputs, not outputs: regenerate them with R/03, never edit the
 -- loaded tables in place.

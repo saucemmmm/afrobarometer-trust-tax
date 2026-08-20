@@ -5,7 +5,8 @@
 --           built into. Concept, encoding and response are separated so that
 --           every harmonization decision is stored as data rather than baked
 --           into a script.
--- Run     : 1st.  duckdb data/afrobarometer.duckdb < sql/01_schema.sql
+-- Run     : 1st, via  Rscript R/05_build_database.R  (from the repository root).
+-- Or directly:  duckdb data/afrobarometer.duckdb -c ".read sql/01_schema.sql"
 -- Idempotent: drops and recreates `core` in full.
 --
 -- Design notes (expanded in README):
