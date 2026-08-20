@@ -27,3 +27,6 @@ sql_project_strategy.md
 
 # scratch dir created by the remote session (safe to delete)
 _to_delete/
+
+# Derived inventories from R/00_inventory_sav.R -- regenerate, do not commit
+docs/inventory_*.csv
