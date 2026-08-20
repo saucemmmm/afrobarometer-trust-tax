@@ -17,6 +17,8 @@ suppressPackageStartupMessages({
   library(haven); library(dplyr); library(purrr); library(readr); library(tibble)
 })
 
+source("R/00_utils.R")   # read_sav_safe(); run from the repository root
+
 RAW_DIR <- Sys.getenv("RAW_DIR", "data/raw")
 OUT_DIR <- Sys.getenv("OUT_DIR", "docs")
 ROUNDS  <- c(6L, 7L, 8L, 9L)
@@ -24,7 +26,7 @@ sav_path <- function(r) file.path(RAW_DIR, sprintf("Merge%d.sav", r))
 
 # n_max = 1: we need the column attributes, not the rows. Reading a single row
 # keeps haven's labelled attributes intact while staying fast on ~50MB files.
-read_meta <- function(r) haven::read_sav(sav_path(r), n_max = 1)
+read_meta <- function(r) read_sav_safe(sav_path(r), n_max = 1)
 
 inventory_variables <- function(df, round_number) {
   tibble(

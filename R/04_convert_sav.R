@@ -22,6 +22,7 @@
 suppressPackageStartupMessages({
   library(haven); library(dplyr); library(purrr); library(DBI); library(duckdb)
 })
+source("R/00_utils.R")   # read_sav_safe(); run from the repository root
 
 RAW_DIR     <- Sys.getenv("RAW_DIR",     "data/raw")
 STAGING_DIR <- Sys.getenv("STAGING_DIR", "data/staging")
@@ -54,36 +55,46 @@ strip_spss <- function(df) {
     as.data.frame()
 }
 
-con <- dbConnect(duckdb::duckdb())
-on.exit(dbDisconnect(con, shutdown = TRUE), add = TRUE)
-
-manifest <- map_dfr(ROUNDS, function(r) {
-  src <- file.path(RAW_DIR, sprintf("Merge%d.sav", r))
-  out <- file.path(STAGING_DIR, sprintf("r%d.parquet", r))
-  message(sprintf("R%d: reading %s ...", r, basename(src)))
-
-  raw <- haven::read_sav(src)
-  labels_as_text <- intersect(LABEL_ALSO_AS_TEXT, names(raw))
-  extra <- as.data.frame(lapply(raw[labels_as_text],
-                                function(x) as.character(haven::as_factor(x))))
-  names(extra) <- paste0(labels_as_text, "_LABEL")
-  df <- cbind(strip_spss(raw), extra)
-
-  duckdb::duckdb_register(con, "tmp_round", df)
-  dbExecute(con, sprintf("COPY tmp_round TO '%s' (FORMAT PARQUET, COMPRESSION ZSTD)", out))
-  duckdb::duckdb_unregister(con, "tmp_round")
-
-  tibble::tibble(round_number = r, n_rows = nrow(df), n_cols = ncol(df),
-                 expected_n = unname(EXPECTED_N[as.character(r)]),
-                 parquet_mb = round(file.size(out) / 1024^2, 1))
-})
-
-manifest <- manifest %>% mutate(reconciles = n_rows == expected_n)
-readr::write_csv(manifest, file.path("docs", "staging_manifest.csv"))
-print(as.data.frame(manifest))
-
-if (!all(manifest$reconciles)) {
-  stop("Row counts do not reconcile against the published figures - investigate ",
-       "before proceeding to sql/02_load_staging.sql")
+main <- function() {
+  con <- dbConnect(duckdb::duckdb())
+  on.exit(dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  
+  manifest <- map_dfr(ROUNDS, function(r) {
+    src <- file.path(RAW_DIR, sprintf("Merge%d.sav", r))
+    out <- file.path(STAGING_DIR, sprintf("r%d.parquet", r))
+    message(sprintf("R%d: reading %s ...", r, basename(src)))
+  
+    used_latin1 <- FALSE
+    raw <- withCallingHandlers(
+      read_sav_safe(src),
+      message = function(m) if (grepl("latin1", conditionMessage(m))) used_latin1 <<- TRUE)
+    enc <- if (used_latin1) "latin1" else "default"
+    labels_as_text <- intersect(LABEL_ALSO_AS_TEXT, names(raw))
+    extra <- as.data.frame(lapply(raw[labels_as_text],
+                                  function(x) as.character(haven::as_factor(x))))
+    names(extra) <- paste0(labels_as_text, "_LABEL")
+    df <- cbind(strip_spss(raw), extra)
+  
+    duckdb::duckdb_register(con, "tmp_round", df)
+    dbExecute(con, sprintf("COPY tmp_round TO '%s' (FORMAT PARQUET, COMPRESSION ZSTD)", out))
+    duckdb::duckdb_unregister(con, "tmp_round")
+  
+    tibble::tibble(round_number = r, n_rows = nrow(df), n_cols = ncol(df),
+                   expected_n = unname(EXPECTED_N[as.character(r)]),
+                   sav_encoding = enc,
+                   parquet_mb = round(file.size(out) / 1024^2, 1))
+  })
+  
+  manifest <- manifest %>% mutate(reconciles = n_rows == expected_n)
+  readr::write_csv(manifest, file.path("docs", "staging_manifest.csv"))
+  print(as.data.frame(manifest))
+  
+  if (!all(manifest$reconciles)) {
+    stop("Row counts do not reconcile against the published figures - investigate ",
+         "before proceeding to sql/02_load_staging.sql")
+  }
+  message("All rounds reconcile. Staging written to ", STAGING_DIR)
 }
-message("All rounds reconcile. Staging written to ", STAGING_DIR)
+
+# Single top-level call: if main() fails, nothing below it can report success.
+main()

@@ -21,6 +21,8 @@ suppressPackageStartupMessages({
   library(tibble); library(stringr); library(tidyr); library(stringi)
 })
 
+source("R/00_utils.R")   # read_sav_safe(); run from the repository root
+
 RAW_DIR <- Sys.getenv("RAW_DIR", "data/raw")
 OUT_DIR <- Sys.getenv("OUT_DIR", "docs")
 ROUNDS  <- c(6L, 7L, 8L, 9L)
@@ -153,7 +155,7 @@ coverage <- map_dfr(ROUNDS, function(r) {
         left_join(concepts, by = "canonical_code") %>%
         filter(role != "weight", canonical_code != "lived_poverty")
   cols <- unique(c(vm$round_variable, "COUNTRY"))
-  df   <- haven::read_sav(file.path(RAW_DIR, sprintf("Merge%d.sav", r)), col_select = all_of(cols))
+  df   <- read_sav_safe(file.path(RAW_DIR, sprintf("Merge%d.sav", r)), col_select = all_of(cols))
   cty  <- as.character(haven::as_factor(df$COUNTRY))
   map_dfr(seq_len(nrow(vm)), function(i) {
     cc <- vm$canonical_code[i]
@@ -217,7 +219,7 @@ variables <- varmap %>%
 message("Building country tables ...")
 ctry <- map_dfr(ROUNDS, function(r) {
   cols <- c("COUNTRY", if (r != 8L) "COUNTRY.BY.REGION")
-  df <- haven::read_sav(file.path(RAW_DIR, sprintf("Merge%d.sav", r)), col_select = all_of(cols))
+  df <- read_sav_safe(file.path(RAW_DIR, sprintf("Merge%d.sav", r)), col_select = all_of(cols))
   tibble(country_name_raw = as.character(haven::as_factor(df$COUNTRY)),
          region = if (r != 8L) as.character(haven::as_factor(df[["COUNTRY.BY.REGION"]])) else NA_character_,
          round_number = r) %>% distinct()

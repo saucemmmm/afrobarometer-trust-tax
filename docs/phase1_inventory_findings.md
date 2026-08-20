@@ -149,6 +149,28 @@ required: the file has the codes, the codebook has their meaning.
 
 ---
 
+### 5.4 Merge6.sav declares LATIN1 and carries non-UTF-8 bytes
+
+`Merge6.sav` sets its file encoding to **LATIN1** in the header and contains
+Latin-1 byte sequences that are not valid UTF-8 - row 39,619 holds `VOTACAO`
+(with cedilla and tilde) in the verbatim field `Q29B`, from the Lusophone
+samples. A default `haven::read_sav()` of the whole file fails with *"Unable to
+convert string to the requested encoding"*.
+
+Two things hide this until late:
+
+- a truncated read (`n_max = 1`) succeeds, because the offending rows are ~39k
+  rows in;
+- a `col_select` read succeeds, because only the selected columns are decoded.
+
+So the inventory and crosswalk scripts run clean on this file and only the full
+staging conversion fails. Every `.sav` read now goes through `read_sav_safe()`
+in `R/00_utils.R`, which retries with `encoding = "latin1"` and says so. The
+encoding actually used is recorded per round in `docs/staging_manifest.csv`.
+R7-R9 read cleanly by default; only R6 needs the fallback.
+
+---
+
 ## 6. What still requires the codebook PDFs
 
 1. **The label for corruption `value_raw = 0`** (§5.3) — blocking.
