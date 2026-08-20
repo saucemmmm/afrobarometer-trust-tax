@@ -18,8 +18,15 @@
 suppressPackageStartupMessages({ library(DBI); library(duckdb) })
 
 DB_PATH <- Sys.getenv("DB_PATH", "data/afrobarometer.duckdb")
-SCRIPTS <- c("sql/01_schema.sql", "sql/02_load_staging.sql",
-             "sql/03_build_crosswalk.sql", "sql/04_normalize.sql")
+SCRIPTS <- c("sql/01_schema.sql",
+             "sql/02_load_staging.sql",
+             "sql/03_build_crosswalk.sql",
+             "sql/04_normalize.sql",
+             "sql/05_validate.sql",
+             "sql/analysis/panel_country_round.sql",   # must precede the other three
+             "sql/analysis/change_over_rounds.sql",
+             "sql/analysis/rank_within_region.sql",
+             "sql/analysis/coverage_report.sql")
 
 # -----------------------------------------------------------------------------
 # split_sql(): break a script into individual statements.
@@ -93,8 +100,24 @@ main <- function() {
       if (!is.null(res) && nrow(res)) { print(res, row.names = FALSE) }
     }
   }
-  message("\nDatabase built: ", DB_PATH)
-  message("Inspect it with:  core.crosswalk_report, core.crosswalk_grid, staging.load_report")
+  # Validation is a GATE, not a report. A build that fails its own checks must
+  # not exit 0 and hand the user a database that looks finished.
+  fails <- dbGetQuery(con, "SELECT * FROM core.validation_failures")
+  if (nrow(fails)) {
+    print(fails, row.names = FALSE)
+    stop(sprintf("%d validation check(s) FAILED - see above. The database is built ",
+                 nrow(fails)),
+         "but must not be used for analysis until these are resolved.", call. = FALSE)
+  }
+  message("\nAll validation checks passed.")
+  message("Database built: ", DB_PATH)
+  message("Inspect it with:")
+  message("  core.crosswalk_grid        concept x round variable-code drift")
+  message("  core.validation_checks     all checks, including warnings")
+  message("  core.missingness_report    item non-response by concept x round")
+  message("  core.analysis_panel        country-round weighted means (R handoff)")
+  message("  core.analysis_panel_balanced  countries present in all four rounds")
+  message("  core.coverage_grid         country x round, NULLs included")
 }
 
 main()
