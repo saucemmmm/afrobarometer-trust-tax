@@ -74,3 +74,45 @@ sav_encoding_used <- function(path) {
   if (!ok) return("latin1")
   tryCatch({ haven::read_sav(path); "default" }, error = function(e) "latin1")
 }
+
+
+# ---- wild_cluster_boot ------------------------------------------------------
+# Wild cluster bootstrap-t (Cameron, Gelbach & Miller 2008): null imposed,
+# Rademacher weights, cluster-level resampling. Used because this panel has only
+# 31-42 country clusters, where conventional cluster-robust standard errors are
+# optimistic and asymptotic normality is a poor approximation.
+#
+# Written out rather than taken from a package so the procedure is inspectable,
+# and because fwildclusterboot is an awkward install on some platforms. It
+# refits `B` times on ~140 rows, which costs a second or two.
+#
+#   formula  the UNRESTRICTED model, fixed effects included as factors
+#   param    name of the coefficient to test, as it appears in model.matrix
+wild_cluster_boot <- function(formula, data, cluster, param, B = 999L, seed = 20260819) {
+  set.seed(seed)
+  d  <- model.frame(formula, data, na.action = na.omit)
+  mm <- model.matrix(formula, d); y <- model.response(d)
+  cl <- droplevels(factor(cluster[as.integer(rownames(d))]))
+  j  <- which(colnames(mm) == param)
+  if (length(j) != 1L) stop("param '", param, "' not found in the model matrix")
+  G <- nlevels(cl); idx <- split(seq_len(nrow(mm)), cl)
+
+  tstat <- function(X, yv) {
+    fit  <- lm.fit(X, yv); b <- fit$coefficients; u <- fit$residuals
+    XtXi <- chol2inv(qr.R(qr(X)))
+    meat <- matrix(0, ncol(X), ncol(X))
+    for (g in idx) { s <- crossprod(X[g, , drop = FALSE], u[g]); meat <- meat + tcrossprod(s) }
+    V <- XtXi %*% meat %*% XtXi * (G / (G - 1)) * ((nrow(X) - 1) / (nrow(X) - ncol(X)))
+    c(b[j] / sqrt(V[j, j]), b[j])
+  }
+  obs   <- tstat(mm, y)
+  r     <- lm.fit(mm[, -j, drop = FALSE], y)          # restricted fit: beta_param = 0
+  fit_r <- r$fitted.values; res_r <- r$residuals
+  t_star <- vapply(seq_len(B), function(b) {
+    w <- sample(c(-1, 1), G, replace = TRUE)[as.integer(cl)]
+    tstat(mm, fit_r + res_r * w)[1]
+  }, numeric(1))
+  list(param = param, estimate = unname(obs[2]), t_obs = unname(obs[1]),
+       n = nrow(mm), G = G, B = B,
+       p_value = (1 + sum(abs(t_star) >= abs(obs[1]))) / (B + 1))
+}
