@@ -33,18 +33,24 @@ Q={ # canonical_code: (concept, role, scale, higher_means, valid_range, question
   "How many of the following people do you think are involved in corruption, or haven’t you heard enough about them to say: Tax Officials (e.g. Ministry of Finance officials or Local Government tax collectors)?",
   {6:"Q53F",7:None,8:"Q42G",9:"Q38G"}),
 }
-LP_STEM="Over the past year, how often, if ever, have you or anyone in your family: "
-LP={"food":"Gone without enough food to eat?","water":"Gone without enough clean water for home use?",
-    "medical":"Gone without medicines or medical treatment?",
-    "fuel":"Gone without enough fuel to cook your food?","cash":"Gone without a cash income?"}
+# Wording differs between rounds: the stem "gone without" moved position at R8.
+LP_A="Over the past year, how often, if ever, have you or anyone in your family: Gone without "
+LP_B="Over the past year, how often, if ever, have you or anyone in your family gone without: "
+LP={"food":("enough food to eat?","Enough food to eat?"),
+    "water":("enough clean water for home use?","Enough clean water for home use?"),
+    "medical":("medicines or medical treatment?","Medicines or medical treatment?"),
+    "fuel":("enough fuel to cook your food?","Enough fuel to cook your food?"),
+    "cash":("a cash income?","A cash income?")}
 for sfx,lt in [("food","A"),("water","B"),("medical","C"),("fuel","D"),("cash","E")]:
+    a,b=LP[sfx]
     Q[f"lp_{sfx}"]=("material_deprivation","lpi_component","likert_0_4","more deprivation",range(0,5),
-      LP_STEM+LP[sfx],{6:f"Q8{lt}",7:f"Q8{lt}",8:f"Q7{lt}",9:f"Q6{lt}"})
+      {6:LP_A+a,7:LP_A+a,8:LP_B+b,9:LP_B+b},{6:f"Q8{lt}",7:f"Q8{lt}",8:f"Q7{lt}",9:f"Q6{lt}"})
 
 CORR0={"corruption_govt_officials","corruption_tax_officials"}
 vrows,lrows=[],[]
 for code,(concept,role,scale,hm,valid,qtext,vmap) in Q.items():
     for rnd in (6,7,8,9):
+        qt = qtext[rnd] if isinstance(qtext,dict) else qtext
         var=vmap[rnd]
         if var is None:
             note=("constructed from lp_* components; see docs/question.md 6.3"
@@ -71,18 +77,23 @@ for code,(concept,role,scale,hm,valid,qtext,vmap) in Q.items():
                 is_missing=miss,
                 harmonization_rule=("missing" if miss else
                     "collapsed to binary: urban={1,3,460}, rural={2}" if code=="urban_rural" else "direct"),
-                codebook_page="",notes=""))
+                notes=""))
         vrows.append(dict(canonical_code=code,concept=concept,role=role,round_number=rnd,
-            present=True,round_variable=var,variable_label=vlab,question_text=qtext,
+            present=True,round_variable=var,variable_label=vlab,question_text=qt,
             codebook_source="",codebook_note="",codebook_page="",raw_scale_type=scale,
             n_substantive_categories=(len(subs) if valid is not None else ""),
             higher_means=hm,asked_all_countries="",countries_excluded="",
-            verified=(bool(qtext) or code in ("lived_poverty","within_weight")) and not (role=="lpi_component" and rnd in (8,9)),
-            notes=("wording carried from the R6/R7 Q8x battery; spot-check against this round's codebook"
+            verified=bool(qt) or code in ("lived_poverty","within_weight"),
+            notes=("stem wording differs from R6/R7: 'gone without' moved into the stem"
                    if role=="lpi_component" and rnd in (8,9)
                    else "constructed/design variable; no codebook question exists"
                    if code in ("lived_poverty","within_weight") else "")))
 V=pd.DataFrame(vrows); L=pd.DataFrame(lrows)
+import os
+if os.path.exists("out/coverage_by_item.csv"):        # derived in Phase 7 style, from the data
+    cov=pd.read_csv("out/coverage_by_item.csv")[["canonical_code","round_number","asked_all_countries","countries_excluded"]]
+    V=V.drop(columns=["asked_all_countries","countries_excluded"]).merge(cov,how="left",on=["canonical_code","round_number"])
+    V=V[[c for c in vrows[0].keys()]]                  # restore column order
 V.to_csv("out/crosswalk_variables.csv",index=False)
 L.to_csv("out/crosswalk_values.csv",index=False)
 print("variable rows:",len(V),"| present:",int(V.present.sum()),"| absent:",int((~V.present).sum()))
