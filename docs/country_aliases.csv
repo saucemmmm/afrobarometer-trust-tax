@@ -1,0 +1,47 @@
+country_name_raw,country_id,country_name,is_alias
+Algeria,1,Algeria,FALSE
+Angola,2,Angola,FALSE
+Benin,3,Benin,FALSE
+Botswana,4,Botswana,FALSE
+Burkina Faso,5,Burkina Faso,FALSE
+Burundi,6,Burundi,FALSE
+Cabo Verde,7,Cabo Verde,FALSE
+Cameroon,8,Cameroon,FALSE
+Cape Verde,7,Cabo Verde,TRUE
+Congo-Brazzaville,9,Congo-Brazzaville,FALSE
+Cote d'Ivoire,10,Côte d'Ivoire,TRUE
+Côte d'Ivoire,10,Côte d'Ivoire,FALSE
+Egypt,11,Egypt,FALSE
+Eswatini,12,Eswatini,FALSE
+Ethiopia,13,Ethiopia,FALSE
+Gabon,14,Gabon,FALSE
+Gambia,15,Gambia,FALSE
+Ghana,16,Ghana,FALSE
+Guinea,17,Guinea,FALSE
+Kenya,18,Kenya,FALSE
+Lesotho,19,Lesotho,FALSE
+Liberia,20,Liberia,FALSE
+Madagascar,21,Madagascar,FALSE
+Malawi,22,Malawi,FALSE
+Mali,23,Mali,FALSE
+Mauritania,24,Mauritania,FALSE
+Mauritius,25,Mauritius,FALSE
+Morocco,26,Morocco,FALSE
+Mozambique,27,Mozambique,FALSE
+Namibia,28,Namibia,FALSE
+Niger,29,Niger,FALSE
+Nigeria,30,Nigeria,FALSE
+Senegal,31,Senegal,FALSE
+Seychelles,32,Seychelles,FALSE
+Sierra Leone,33,Sierra Leone,FALSE
+South Africa,34,South Africa,FALSE
+Sudan,35,Sudan,FALSE
+Swaziland,12,Eswatini,TRUE
+São Tomé and Príncipe,36,São Tomé and Príncipe,FALSE
+Tanzania,37,Tanzania,FALSE
+Togo,38,Togo,FALSE
+Tunisia,39,Tunisia,FALSE
+Uganda,40,Uganda,FALSE
+Zambia,41,Zambia,FALSE
+Zimbabwe,42,Zimbabwe,FALSE
+eSwatini,12,Eswatini,TRUE

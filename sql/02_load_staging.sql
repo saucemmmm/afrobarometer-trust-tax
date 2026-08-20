@@ -1,6 +1,6 @@
 -- 02_load_staging.sql
 -- Purpose: register one staging table per survey round from the Parquet files
---          written by R/01_convert_sav.R (Phase 3.3).
+--          written by R/04_convert_sav.R (Phase 3.3).
 -- Keeps ALL columns; column selection happens later, in version-controlled SQL.
 -- Run order: 2nd.
 -- STATUS: stub.

@@ -1,0 +1,43 @@
+country_id,country_name,iso3,region
+1,Algeria,,North Africa
+2,Angola,,Southern Africa
+3,Benin,,West Africa
+4,Botswana,,Southern Africa
+5,Burkina Faso,,West Africa
+6,Burundi,,East Africa
+7,Cabo Verde,,West Africa
+8,Cameroon,,Central Africa
+9,Congo-Brazzaville,,Central Africa
+10,Côte d'Ivoire,,West Africa
+11,Egypt,,North Africa
+12,Eswatini,,Southern Africa
+13,Ethiopia,,East Africa
+14,Gabon,,Central Africa
+15,Gambia,,West Africa
+16,Ghana,,West Africa
+17,Guinea,,West Africa
+18,Kenya,,East Africa
+19,Lesotho,,Southern Africa
+20,Liberia,,West Africa
+21,Madagascar,,East Africa
+22,Malawi,,Southern Africa
+23,Mali,,West Africa
+24,Mauritania,,North Africa
+25,Mauritius,,East Africa
+26,Morocco,,North Africa
+27,Mozambique,,Southern Africa
+28,Namibia,,Southern Africa
+29,Niger,,West Africa
+30,Nigeria,,West Africa
+31,Senegal,,West Africa
+32,Seychelles,,East Africa
+33,Sierra Leone,,West Africa
+34,South Africa,,Southern Africa
+35,Sudan,,North Africa
+36,São Tomé and Príncipe,,Central Africa
+37,Tanzania,,East Africa
+38,Togo,,West Africa
+39,Tunisia,,North Africa
+40,Uganda,,East Africa
+41,Zambia,,Southern Africa
+42,Zimbabwe,,Southern Africa
