@@ -90,15 +90,26 @@ sav_encoding_used <- function(path) {
 #   param    name of the coefficient to test, as it appears in model.matrix
 wild_cluster_boot <- function(formula, data, cluster, param, B = 999L, seed = 20260819) {
   set.seed(seed)
-  d  <- model.frame(formula, data, na.action = na.omit)
-  mm <- model.matrix(formula, d); y <- model.response(d)
-  cl <- droplevels(factor(cluster[as.integer(rownames(d))]))
-  j  <- which(colnames(mm) == param)
+  data <- as.data.frame(data)
+  # Carry the cluster as a COLUMN, never index it by rownames. A subsetted data
+  # frame keeps its original rownames, so cluster[as.integer(rownames(mf))]
+  # silently mis-aligns and injects NAs -- a bug that stays hidden until the
+  # first time this is called on anything other than a full, freshly-read frame.
+  data[[".__cluster"]] <- cluster
+  vars <- unique(c(all.vars(formula), ".__cluster"))
+  d    <- data[stats::complete.cases(data[, vars, drop = FALSE]), , drop = FALSE]
+
+  mm <- stats::model.matrix(formula, d)
+  y  <- stats::model.response(stats::model.frame(formula, d))
+  cl <- droplevels(factor(d[[".__cluster"]]))
+  stopifnot(nrow(mm) == length(y), nrow(mm) == length(cl), !anyNA(y))
+
+  j <- which(colnames(mm) == param)
   if (length(j) != 1L) stop("param '", param, "' not found in the model matrix")
   G <- nlevels(cl); idx <- split(seq_len(nrow(mm)), cl)
 
   tstat <- function(X, yv) {
-    fit  <- lm.fit(X, yv); b <- fit$coefficients; u <- fit$residuals
+    fit  <- stats::lm.fit(X, yv); b <- fit$coefficients; u <- fit$residuals
     XtXi <- chol2inv(qr.R(qr(X)))
     meat <- matrix(0, ncol(X), ncol(X))
     for (g in idx) { s <- crossprod(X[g, , drop = FALSE], u[g]); meat <- meat + tcrossprod(s) }
@@ -106,7 +117,7 @@ wild_cluster_boot <- function(formula, data, cluster, param, B = 999L, seed = 20
     c(b[j] / sqrt(V[j, j]), b[j])
   }
   obs   <- tstat(mm, y)
-  r     <- lm.fit(mm[, -j, drop = FALSE], y)          # restricted fit: beta_param = 0
+  r     <- stats::lm.fit(mm[, -j, drop = FALSE], y)   # restricted fit: beta_param = 0
   fit_r <- r$fitted.values; res_r <- r$residuals
   t_star <- vapply(seq_len(B), function(b) {
     w <- sample(c(-1, 1), G, replace = TRUE)[as.integer(cl)]

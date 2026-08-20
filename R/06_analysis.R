@@ -145,8 +145,24 @@ main <- function() {
   #    are reported alongside it, not instead of it.
   # ---------------------------------------------------------------------------
   keys <- c("wmean_corruption_govt", "wmean_govt_perf_economy")
+
+  # A country observed in ONE round only is a fixed-effect singleton: its country
+  # dummy fits that single observation exactly, so it contributes nothing to the
+  # within-country slope. fixest removes such rows automatically; lm does not,
+  # and silently keeping them makes the two report different N, different cluster
+  # counts and different degrees of freedom for an identical estimate. Six
+  # countries are affected here -- Algeria, Burundi, Congo-Brazzaville, Egypt,
+  # Mauritania, Seychelles -- taking the identifying sample from 142 to 136 rows
+  # and 42 clusters to 36. Dropping them here keeps every inference layer
+  # describing the SAME estimating sample.
+  drop_fe_singletons <- function(dat) {
+    dat <- dat[stats::complete.cases(dat[, all.vars(fml)]), ]
+    keep <- names(which(table(droplevels(dat$country)) > 1))
+    droplevels(dat[as.character(dat$country) %in% keep, ])
+  }
+
   inference <- function(dat, label) {
-    dat <- droplevels(dat)
+    dat <- drop_fe_singletons(dat)
     lmx <- lm(update(fml, . ~ . + country + round), data = dat)
     cr1 <- coef_test(lmx, vcov = "CR1S", cluster = dat$country, test = "naive-t")
     cr2 <- coef_test(lmx, vcov = "CR2",  cluster = dat$country, test = "Satterthwaite")
@@ -185,6 +201,12 @@ main <- function() {
     data = micro, weights = ~within_weight, cluster = ~country_id)
   cat("\n=== Individual level, weighted, country+round FE ===\n")
   print(etable(m_micro, fitstat = ~ n + r2))
+  message(
+    "CAUTION: the stars on the individual-level model are asymptotic and clustered\n",
+    "  on the same ~36-42 countries. The large N is respondents, NOT clusters, and\n",
+    "  inference is governed by the cluster count. Treat this model as a check that\n",
+    "  the panel association is not an artefact of aggregation -- take the reported\n",
+    "  p-values from the panel model's CR2 and bootstrap columns instead.")
   write_csv(broom_tidy(m_micro), file.path(OUT_DIR, "micro_twoway_fe.csv"))
 
   message("\nResults written to ", OUT_DIR, "/")
