@@ -1,0 +1,8 @@
+-- analysis/panel_country_round.sql
+-- Question: what is the weighted country-round mean of each harmonized item,
+--           restricted to cells with adequate valid sample size?
+-- Techniques: CTEs, multi-table joins, weighted aggregation, HAVING-style guard.
+-- Note: means are WEIGHTED (within_weight). Unweighted means from a stratified
+--       sample are wrong; do not "simplify" this.
+-- Defines the source of the `analysis_panel` view handed off to R.
+-- STATUS: stub.

@@ -1,0 +1,5 @@
+-- analysis/coverage_report.sql
+-- Question: which countries were surveyed in which rounds, and where are the gaps?
+-- Techniques: CROSS JOIN + LEFT JOIN, where the NULLs ARE the finding.
+-- Output feeds docs/coverage.md and the balanced-panel restriction in Phase 9.
+-- STATUS: stub.

@@ -1,0 +1,6 @@
+-- 03_build_crosswalk.sql
+-- Purpose: populate questions, question_map and response_values from
+--          docs/crosswalk_draft.csv (Phase 5) — the harmonization core.
+-- Every value_harmonized / is_missing decision must trace to a codebook page.
+-- Run order: 3rd.
+-- STATUS: stub.

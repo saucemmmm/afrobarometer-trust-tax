@@ -1,0 +1,6 @@
+-- 01_schema.sql
+-- Purpose: define the normalized target schema (Phase 4).
+-- Creates: countries, rounds, country_rounds, respondents, questions,
+--          question_map, response_values, responses.
+-- Run order: 1st. Idempotent — drops and recreates the `core` schema.
+-- STATUS: stub. Do not fill in before Phase 4.

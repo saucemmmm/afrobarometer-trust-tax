@@ -1,10 +1,14 @@
 # --- Data: never commit. Afrobarometer data is not ours to redistribute. ---
-data/raw/
-data/staging/
+data/raw/*
+!data/raw/.gitkeep
+data/staging/*
+!data/staging/.gitkeep
 data/*.duckdb
 data/*.duckdb.wal
 *.sav
 *.parquet
+# Afrobarometer codebooks are copyrighted; do not redistribute
+*.pdf
 
 # --- R ---
 .Rhistory
@@ -20,3 +24,6 @@ Thumbs.db
 # --- Private planning docs: not for a public portfolio repo ---
 afrobarometer_sql_project_outline.md
 sql_project_strategy.md
+
+# scratch dir created by the remote session (safe to delete)
+_to_delete/

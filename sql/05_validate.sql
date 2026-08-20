@@ -1,0 +1,8 @@
+-- 05_validate.sql
+-- Purpose: data-quality checks (Phase 7). Each check returns ZERO rows when healthy.
+--   1. orphaned responses (no matching respondent)
+--   2. respondent counts reconcile against country_rounds.n_respondents
+--   3. every raw response code appears in response_values
+--   4. weights present and strictly positive
+-- Run order: 5th, after 04_normalize.sql.
+-- STATUS: stub.

@@ -1,0 +1,6 @@
+-- analysis/change_over_rounds.sql
+-- Question: how does each country's weighted mean change from one round to the next?
+-- Techniques: LAG() OVER (PARTITION BY country, item ORDER BY round) — avoids a self-join.
+-- Caution: LAG across an unbalanced panel silently compares non-adjacent rounds
+--          when a country skips one. Guard on round_number difference.
+-- STATUS: stub.

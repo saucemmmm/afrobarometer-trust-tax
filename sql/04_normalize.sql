@@ -1,0 +1,8 @@
+-- 04_normalize.sql
+-- Purpose: move staging -> normalized tables (Phase 6).
+--          Respondent IDs are round-prefixed ('R9_' || respno) because respno
+--          is unique WITHIN a round only, not across rounds.
+--          Wide staging columns are unpivoted into long `responses` by joining
+--          question_map, so variable names live in data, not in this script.
+-- Run order: 4th.
+-- STATUS: stub.
