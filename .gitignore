@@ -31,3 +31,4 @@ _to_delete/
 # derived inventories from R/01_inventory_sav.R -- regenerate, do not commit
 docs/inventory_*.csv
 docs/codebook_entries.csv
+docs/staging_manifest.csv
