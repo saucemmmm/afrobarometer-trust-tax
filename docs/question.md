@@ -14,8 +14,10 @@
 
 **Code status.** Variable codes below are **extracted from the `.sav` files**
 via SPSS metadata attributes — not guessed, not carried over between rounds.
-Exact question wording and the label for the corruption `0` category are still
-**pending codebook confirmation** (§8).
+Question wording and the corruption `0` label were confirmed from the codebook
+PDFs on 2026-08-19 (§8). The `LivedPoverty` formula was verified empirically
+against the data (§6.3). The crosswalk is populated in
+`docs/crosswalk_variables.csv` and `docs/crosswalk_values.csv`.
 
 ---
 
@@ -175,6 +177,13 @@ carries `99 = Not asked in this country` on performance items. Every one of
 these maps to `value_harmonized = NULL`, `is_missing = TRUE`, **per round**.
 No round-invariant missing rule is correct.
 
+> ⚠️ **The trap this creates.** On `education_level`, **`9 = Post-graduate` is a
+> valid response** while `98`/`99` are Refused/Don't know. A blanket rule of the
+> form "code 9 is Don't know" — correct for every trust, corruption and
+> performance item here — would silently delete the most-educated respondents
+> from the sample. Missingness is a property of the **item**, not of the code.
+> This is precisely what `response_values` is for.
+
 **b. Urban/rural categories are not harmonized.**
 
 | Round | Categories |
@@ -184,8 +193,14 @@ No round-invariant missing rule is correct.
 | R9 | 1 Urban · 2 Rural · 3 Peri-urban |
 
 **Decision: collapse to binary — Urban = {1, 3, 460}, Rural = {2}** — and
-document it. The stray `460` code in R6/R7 is a data-quality finding for the
-README; check the codebook before assuming it means what its label says.
+document it.
+
+`460` is confirmed as **Peri-Urban** in the R7 codebook. It appears in the R6
+data (**88 cases**, 0.16%) and R7 data (**40 cases**, 0.09%) but is **not
+documented in the R6 codebook** — an undocumented code carried into the merged
+file. It is recorded in `response_values` for both rounds and folded into
+Urban. Small enough that the binary collapse is not sensitive to it; report it
+in the README as a data-quality finding rather than silently dropping it.
 
 **c. The survey weight changed definition at R8.** R8/R9 split the
 within-country weight into `withinwt_ea` ("old AB withinwt", enumeration-area
@@ -197,20 +212,31 @@ in the memo; it is a substantive choice, not a formality.
 **d. Gender label wording changed** (R6 "Male/Female" → R9 "Man/Woman") on
 identical codes 1/2. Harmless, but record it rather than silently unifying.
 
-### 6.3 The one open construction decision — Lived Poverty in R6
+### 6.3 Lived Poverty in R6 — formula confirmed empirically
 
-`LivedPoverty` (documented as the average of five deprivation items) is
-pre-built in R7, R8 and R9 but **not in R6**. R6 carries the five components
-(`Q8A`–`Q8E`: food, water, medical care, cooking fuel, cash income), as do the
-later rounds (`Q7A`–`Q7E` in R8, `Q6A`–`Q6E` in R9).
+`LivedPoverty` is pre-built in R7, R8 and R9 but **absent from R6**. The term
+does not appear in any codebook PDF, so the formula was verified against the
+data itself.
 
-- **Recommended:** construct R6's index from `Q8A`–`Q8E` using the same
-  averaging formula, after confirming the formula in the R7 codebook. Cost:
-  five extra `questions` rows and their value mappings, R6 only — roughly
-  30–45 minutes.
-- **Fallback if time is tight:** cut `lived_poverty` entirely. Do **not**
-  include it for R7–R9 only; that silently changes the estimation sample
-  across rounds.
+**Confirmed rule** — tested on R7, R8 and R9 (146,000+ records, exact match to
+1e-6 in all three):
+
+> `lived_poverty` = the arithmetic mean of the five deprivation items, each on
+> its 0–4 substantive scale, computed **only where all five are non-missing**.
+> Where any component is missing, the index is **NULL**.
+
+The listwise rule is not an assumption — it is identifiable from the null
+pattern. In R7, `LivedPoverty` is non-null for exactly the 45,352 respondents
+with zero missing components and null for all 471 with one or more. R8 and R9
+show the same structure. An average-over-available rule would have produced
+values for those 471; it does not.
+
+**R6 is constructed to this rule** from `Q8A`–`Q8E`, which carry the same 0–4
+scale (0 Never · 1 Just once or twice · 2 Several times · 3 Many times ·
+4 Always). The five components are recorded as `lp_food`, `lp_water`,
+`lp_medical`, `lp_fuel`, `lp_cash` in the crosswalk for **all four rounds**,
+which makes the construction auditable and lets R7–R9 serve as a regression
+test: recomputing the index there must reproduce the shipped variable exactly.
 
 > ⚠️ **This list is FROZEN.** Adding a variable is traded directly against
 > finishing. If a new variable is proposed, answer first which one it replaces.
@@ -243,18 +269,25 @@ that determines whether any cross-round comparison is balanced.
 
 ---
 
-## 8. What still requires the codebook PDFs
+## 8. Codebook confirmations — resolved 2026-08-19
 
-1. **The label for `value_raw = 0` on every corruption item.** It exists in all
-   four rounds with an **empty** label in the `.sav`; values 1–3 are Some /
-   Most / All. Almost certainly "None", but the file does not say so.
-   **Blocking** — this cannot be extracted and must be read.
-2. **Verbatim question wording** for every item in §6.1 and §7.
-3. **The `LivedPoverty` averaging formula** (§6.3).
-4. **The meaning of `URBRUR = 460`** in R6/R7 (§6.2b).
-5. **Country coverage notes** for any item not asked in all countries.
+| # | Item | Status |
+|---|---|---|
+| 1 | Label for `value_raw = 0` on all corruption items | ✅ **`0 = None`**, confirmed for `Q53C`/`Q44C`/`Q42C`/`Q38C` and `Q53F`/`Q42G`/`Q38G`. Absent from the `.sav`; recorded in `crosswalk_values.csv`. |
+| 2 | Verbatim wording for §6.1 and §7 items | ✅ Confirmed and loaded. `lived_poverty` and `within_weight` have no codebook question — they are constructed/design variables. |
+| 3 | `LivedPoverty` formula | ✅ Not in any codebook; **verified empirically** — see §6.3. |
+| 4 | `URBRUR = 460` | ✅ **Peri-Urban**, documented in R7, undocumented in R6 — see §6.2b. |
 
----
+**Still outstanding (non-blocking):**
+
+- **Wording for the five `lp_*` components.** Marked
+  `verified = FALSE` in the crosswalk. Not blocking — the codes, scale and
+  formula are confirmed — but the `question_text` cells should be filled before
+  the crosswalk is called complete.
+- **`codebook_page` is empty throughout.** Fill as you go; it is the audit trail
+  that makes every harmonization decision traceable, and Phase 11 checks for it.
+- **`asked_all_countries`** is unset. Populate from each codebook's Note field,
+  or derive it from the data during Phase 7 validation.
 
 ## 9. Inference notes fixed in advance
 
