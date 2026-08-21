@@ -93,86 +93,63 @@ docs/ question.md (the frozen estimand)  crosswalk_*.csv  memo.md
 ## Schema
 
 ```mermaid
-erDiagram
-    countries ||--o{ country_aliases  : "spelled as"
-    countries ||--o{ country_rounds   : "surveyed in"
-    rounds    ||--o{ country_rounds   : "covers"
-    countries ||--o{ respondents      : "home of"
-    rounds    ||--o{ respondents      : "fielded"
-    questions ||--o{ question_map     : "asked as"
-    rounds    ||--o{ question_map     : "in"
-    questions ||--o{ response_values  : "decoded by"
-    rounds    ||--o{ response_values  : "in"
-    respondents ||--o{ responses      : "gives"
-    questions   ||--o{ responses      : "answered in"
+%%{init: {"theme":"base","themeVariables":{
+  "fontFamily":"ui-sans-serif, -apple-system, Segoe UI, Helvetica, sans-serif",
+  "fontSize":"13px","lineColor":"#4a3aa7","primaryTextColor":"#0b0b0b",
+  "edgeLabelBackground":"#eef2f9"},
+  "flowchart":{"curve":"monotoneX","nodeSpacing":34,"rankSpacing":170,"padding":8}}}%%
+flowchart LR
 
-    countries {
-        int     country_id PK
-        varchar country_name UK "canonical spelling"
-        varchar region
-    }
-    country_aliases {
-        varchar country_name_raw PK "as spelled in that round"
-        int     country_id FK
-        bool    is_alias
-    }
-    rounds {
-        int     round_id PK
-        date    fieldwork_start
-        date    fieldwork_end
-        varchar within_weight_variable "changes at R8"
-    }
-    country_rounds {
-        int country_id FK "composite PK with round_id"
-        int round_id   FK
-        int n_respondents
-    }
-    respondents {
-        varchar respondent_id PK "round-prefixed"
-        varchar respno_raw        "unique within a round only"
-        int     country_id FK
-        int     round_id   FK
-        double  within_weight
-        varchar urban_rural
-        int     age
-        varchar gender
-        int     education_level
-        double  lived_poverty
-    }
-    questions {
-        int     question_id PK
-        varchar canonical_code UK "trust_police"
-        varchar concept
-        varchar role
-        varchar higher_means "direction, so signs cannot be misread"
-    }
-    question_map {
-        int     round_id    FK "composite PK with question_id"
-        int     question_id FK
-        bool    present        "FALSE = confirmed not asked"
-        varchar round_variable  "Q52H / Q43G / Q41G / Q37G"
-        varchar question_text   "verbatim, per round"
-        bool    asked_all_countries
-        int     codebook_page
-    }
-    response_values {
-        int     question_id FK "composite PK: question, round, value_raw"
-        int     round_id    FK
-        int     value_raw
-        varchar value_label
-        int     value_harmonized "NULL for every missing code"
-        bool    is_missing
-    }
-    responses {
-        varchar respondent_id FK "composite PK with question_id"
-        int     question_id   FK
-        int     value_raw        "raw code; decoded at query time"
-    }
+QUESTIONS["<b>QUESTIONS</b><br><i>one row per concept</i><hr>question_id &nbsp;<b>PK</b><br>canonical_code<br>role &nbsp;·&nbsp; higher_means"]
+ROUNDS["<b>ROUNDS</b><br><i>one row per survey wave</i><hr>round_id &nbsp;<b>PK</b><br>fieldwork_start / end<br>within_weight_variable"]
+COUNTRIES["<b>COUNTRIES</b><br><i>one row per country</i><hr>country_id &nbsp;<b>PK</b><br>country_name<br>region"]
+
+QMAP["<b>QUESTION_MAP</b><br><i>the crosswalk — concept × round</i><hr>round_variable &nbsp;<i>Q52H → Q37G</i><br>question_text &nbsp;<i>per round</i><br>present &nbsp;·&nbsp; codebook_page"]
+RVALS["<b>RESPONSE_VALUES</b><br><i>what each code means — concept × round</i><hr>value_raw<br>value_harmonized &nbsp;<i>NULL if missing</i><br>is_missing"]
+RESPS["<b>RESPONDENTS</b><br><i>one row per person interviewed</i><hr>respondent_id &nbsp;<b>PK</b><br>within_weight<br>age · gender · education"]
+
+ANSWERS["<b>RESPONSES</b><br><i>2.07M raw answers</i><hr>respondent_id &nbsp;<b>FK</b><br>question_id &nbsp;<b>FK</b><br>value_raw &nbsp;<i>undecoded</i>"]
+ALIAS["<b>COUNTRY_ALIASES</b><br><i>name spellings by round</i><hr>country_name_raw"]
+CROUNDS["<b>COUNTRY_ROUNDS</b><br><i>coverage — 143 of 168 cells</i><hr>n_respondents"]
+
+QUESTIONS ==>|"one concept,<br>four round codes"| QMAP
+ROUNDS    -->|"supplies each<br>round's code"| QMAP
+QUESTIONS ==>|"one scale,<br>four code sets"| RVALS
+ROUNDS    -->|"sets that round's<br>missing codes"| RVALS
+ROUNDS    -->|"interviewed<br>during"| RESPS
+COUNTRIES -->|"is home to"| RESPS
+QUESTIONS -->|"is answered in"| ANSWERS
+RESPS     ==>|"gives one answer<br>per question"| ANSWERS
+COUNTRIES -->|"has alternate<br>spellings"| ALIAS
+COUNTRIES -->|"appears in only<br>some rounds"| CROUNDS
+ROUNDS    -->|"covers a different<br>country set"| CROUNDS
+
+RESPS ~~~ ALIAS
+RESPS ~~~ CROUNDS
+
+classDef g1 fill:#e8f1fc,stroke:#2a78d6,stroke-width:2px,color:#0b0b0b
+classDef g2 fill:#fdeee7,stroke:#eb6834,stroke-width:2.4px,color:#0b0b0b
+classDef g3 fill:#e7f6f1,stroke:#12876a,stroke-width:2px,color:#0b0b0b
+class COUNTRIES,ROUNDS,QUESTIONS g1
+class QMAP,RVALS,RESPS g2
+class ANSWERS,ALIAS,CROUNDS g3
+linkStyle default stroke:#4a3aa7,stroke-width:1.5px,color:#3b2f86
+linkStyle 6 stroke:#8d84c9,stroke-width:1.2px,stroke-dasharray:5 4,color:#6a61ab
+linkStyle 11,12 stroke-width:0px
 ```
 
-**`question_map` is the heart of it.** One concept, four round-specific codes.
-`response_values` handles the harder half: codes shifting is easy, *scales and
-missing-value conventions* shifting is what breaks naive merges.
+**Read it left to right.** Column 1 is what exists — a country, a survey wave, a
+concept. Column 2 is what each round did with it. Column 3 is what came out.
+
+**`question_map` and `response_values` are the heart of it**, and the diagram
+shows why: both are fed by `questions` *and* `rounds`. Nothing about this data is
+a property of a question alone — it is always a property of a question **in a
+round**. Codes shifting between rounds is the easy half; *scales and
+missing-value conventions* shifting is what breaks a naive merge.
+
+`responses` stores `value_raw` only. Every value must be joined to
+`response_values` to mean anything, so the harmonization can never be applied
+silently.
 
 ## Design notes
 
