@@ -96,9 +96,11 @@ docs/ question.md (the frozen estimand)  crosswalk_*.csv  memo.md
 %%{init: {"theme":"base","themeVariables":{
   "fontFamily":"ui-sans-serif, -apple-system, Segoe UI, Helvetica, sans-serif",
   "fontSize":"13px","lineColor":"#4a3aa7","primaryTextColor":"#0b0b0b",
-  "edgeLabelBackground":"#eef2f9"},
+  "edgeLabelBackground":"#eef2f9","clusterBkg":"#eef2f9","clusterBorder":"#dfe4ee"},
   "flowchart":{"curve":"monotoneX","nodeSpacing":34,"rankSpacing":170,"padding":8}}}%%
 flowchart LR
+subgraph CANVAS[" "]
+direction LR
 
 QUESTIONS["<b>QUESTIONS</b><br><i>one row per concept</i><hr>question_id &nbsp;<b>PK</b><br>canonical_code<br>role &nbsp;·&nbsp; higher_means"]
 ROUNDS["<b>ROUNDS</b><br><i>one row per survey wave</i><hr>round_id &nbsp;<b>PK</b><br>fieldwork_start / end<br>within_weight_variable"]
@@ -126,6 +128,7 @@ ROUNDS    -->|"covers a different<br>country set"| CROUNDS
 
 RESPS ~~~ ALIAS
 RESPS ~~~ CROUNDS
+end
 
 classDef g1 fill:#e8f1fc,stroke:#2a78d6,stroke-width:2px,color:#0b0b0b
 classDef g2 fill:#fdeee7,stroke:#eb6834,stroke-width:2.4px,color:#0b0b0b
@@ -133,10 +136,12 @@ classDef g3 fill:#e7f6f1,stroke:#12876a,stroke-width:2px,color:#0b0b0b
 class COUNTRIES,ROUNDS,QUESTIONS g1
 class QMAP,RVALS,RESPS g2
 class ANSWERS,ALIAS,CROUNDS g3
+style CANVAS fill:#eef2f9,stroke:#d8dee9,stroke-width:1px,color:#eef2f9
 linkStyle default stroke:#4a3aa7,stroke-width:1.5px,color:#3b2f86
 linkStyle 6 stroke:#8d84c9,stroke-width:1.2px,stroke-dasharray:5 4,color:#6a61ab
 linkStyle 11,12 stroke-width:0px
 ```
+
 
 **Read it left to right.** Column 1 is what exists — a country, a survey wave, a
 concept. Column 2 is what each round did with it. Column 3 is what came out.
